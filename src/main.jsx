@@ -1,10 +1,12 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import BadgerApp from './components/structural/BadgerApp.jsx';
-
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import 'bootstrap/dist/css/bootstrap.min.css'
 import './index.css'
-import 'bootstrap/dist/css/bootstrap.min.css';
+import App from './App.jsx'
+import { BrowserRouter, HashRouter } from 'react-router-dom'
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <BadgerApp />
+createRoot(document.getElementById('root')).render(
+  <HashRouter>
+    <App />
+  </HashRouter>
 )
