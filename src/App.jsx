@@ -1,20 +1,24 @@
-import './App.css'
-import { Routes, Route } from 'react-router-dom'
-import HomePage from './pages/HomePage.jsx'
-import AboutPage from './pages/AboutPage.jsx'
-import NotFoundPage from './pages/NotFoundPage.jsx'
-import Layout from './components/Layout.jsx'
+import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AppProvider } from "./hooks/AppContext";
+import AppNavBar from "./components/AppNavBar";
+import HomePage from "./pages/HomePage";
+import TierListPage from "./pages/TierListPage";
+import FavoritesPage from "./pages/FavoritesPage";
+import StatsPage from "./pages/StatsPage";
 
-function App() {
+export default function App() {
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<HomePage />} />
-        <Route path="about" element={<AboutPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-    </Routes>
-  )
+    <AppProvider>
+      <BrowserRouter>
+        <AppNavBar />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/tierlist" element={<TierListPage />} />
+          <Route path="/favorites" element={<FavoritesPage />} />
+          <Route path="/stats" element={<StatsPage />} />
+        </Routes>
+      </BrowserRouter>
+    </AppProvider>
+  );
 }
-
-export default App
