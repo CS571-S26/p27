@@ -3,8 +3,11 @@ import { Container, Row, Col, Button, Badge } from "react-bootstrap";
 import { useApp } from "../hooks/AppContext";
 import { fetchPokemonList, fetchPokemon, GENERATIONS, spriteUrl, TYPE_COLORS } from "../utils/pokeapi";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { useNavigate } from "react-router-dom";
+
 
 function FavCard({ id, name, types, selected, onToggle }) {
+  
   return (
     <div
       className={`fav-card ${selected ? "selected" : ""}`}
@@ -30,6 +33,7 @@ function FavCard({ id, name, types, selected, onToggle }) {
 }
 
 export default function FavoritesPage() {
+  const navigate = useNavigate();
   const { favorites, toggleFavorite } = useApp();
   const [activeGenIdx, setActiveGenIdx] = useState(0);
   const [pokemonData, setPokemonData] = useState({});
@@ -160,7 +164,7 @@ export default function FavoritesPage() {
           color: "white", cursor: "pointer",
           zIndex: 100,
         }}
-          onClick={() => window.location.href = "/stats"}
+          onClick={() => navigate("/stats")}
         >
           ❤️ {favCount} favorites → View Stats
         </div>
