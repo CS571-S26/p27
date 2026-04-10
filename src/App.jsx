@@ -10,7 +10,7 @@ import StatsPage from "./pages/StatsPage";
 export default function App() {
   return (
     <AppProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/p27">
         <AppNavBar />
         <Routes>
           <Route path="/" element={<HomePage />} />
