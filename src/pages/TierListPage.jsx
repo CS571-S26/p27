@@ -212,13 +212,7 @@ export default function TierListPage() {
           {unrankedFiltered.map(id => {
             const p = pokemonData[id];
             if (!p) return (
-              <div key={id} style={{
-                width: 64, height: 80, background: "rgba(15,52,96,0.4)",
-                borderRadius: 8, display: "flex", alignItems: "center",
-                justifyContent: "center", fontSize: "0.55rem", color: "#9fa8da"
-              }}>
-                #{id}
-              </div>
+              null
             );
             return (
               <PokemonCard

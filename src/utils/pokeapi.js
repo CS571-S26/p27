@@ -12,7 +12,7 @@ async function cachedFetch(url) {
 }
 
 // Returns basic list of pokemon (name + id) for a generation range
-export async function fetchPokemonList(limit = 151, offset = 0) {
+export async function fetchPokemonList(limit = 156, offset = 0) {
   const data = await cachedFetch(`${BASE}/pokemon?limit=${limit}&offset=${offset}`);
   return data.results.map((p, i) => ({
     name: p.name,
@@ -32,14 +32,15 @@ export function spriteUrl(id) {
 
 // Generation ranges
 export const GENERATIONS = [
-  { label: "Gen I", name: "Kanto", offset: 0, limit: 151, color: "#e53935" },
-  { label: "Gen II", name: "Johto", offset: 151, limit: 100, color: "#1565c0" },
+  { label: "Gen I", name: "Kanto", offset: 0, limit: 151, color: "#b15932" },
+  { label: "Gen II", name: "Johto", offset: 151, limit: 100, color: "#d8bb5a" },
   { label: "Gen III", name: "Hoenn", offset: 251, limit: 135, color: "#2e7d32" },
-  { label: "Gen IV", name: "Sinnoh", offset: 386, limit: 107, color: "#6a1b9a" },
-  { label: "Gen V", name: "Unova", offset: 493, limit: 156, color: "#4527a0" },
-  { label: "Gen VI", name: "Kalos", offset: 649, limit: 72, color: "#0277bd" },
-  { label: "Gen VII", name: "Alola", offset: 721, limit: 88, color: "#f57f17" },
-  { label: "Gen VIII", name: "Galar", offset: 809, limit: 96, color: "#00695c" },
+  { label: "Gen IV", name: "Sinnoh", offset: 386, limit: 107, color: "#254767" },
+  { label: "Gen V", name: "Unova", offset: 493, limit: 156, color: "#6d6e70" },
+  { label: "Gen VI", name: "Kalos", offset: 649, limit: 72, color: "#9dc4a2" },
+  { label: "Gen VII", name: "Alola", offset: 721, limit: 88, color: "#2b1674" },
+  { label: "Gen VIII", name: "Galar", offset: 809, limit: 96, color: "#ce91b0" },
+  { label: "Gen IX", name: "Paldea", offset: 905, limit: 120, color: "#67150a" },
 ];
 
 export function getGenForId(id) {

@@ -164,7 +164,7 @@ export default function FavoritesPage() {
           color: "white", cursor: "pointer",
           zIndex: 100,
         }}
-          onClick={() => navigate("/stats")}
+          onClick={() => navigate("/stats", { state: { tab: "favorites" } })}
         >
           ❤️ {favCount} favorites → View Stats
         </div>
