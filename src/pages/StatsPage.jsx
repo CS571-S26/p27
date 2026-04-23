@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Container, Row, Col, Tab, Tabs } from "react-bootstrap";
+import { useLocation } from "react-router-dom";
 import { useApp } from "../hooks/AppContext";
 import { fetchPokemon, TYPE_COLORS, GENERATIONS, TIERS, spriteUrl } from "../utils/pokeapi";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -60,9 +61,17 @@ function InsightCard({ label, value, sub, color = "#e040fb" }) {
 
 export default function StatsPage() {
   const { tierState, favorites } = useApp();
+  const location = useLocation();
   const [pokemonDetails, setPokemonDetails] = useState({});
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("tier");
+  const [activeTab, setActiveTab] = useState(location.state?.tab || "tier");
+
+  // Sync tab when navigated to with state (e.g. from Favorites button)
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location.state]);
 
   // Gather all ranked pokemon ids
   const rankedIds = useMemo(() => {

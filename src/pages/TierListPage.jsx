@@ -133,7 +133,7 @@ export default function TierListPage() {
           <div className="progress-pill">
             <span style={{ color: "#78C850" }}>✓ {totalRanked} ranked</span>
             <span style={{ color: "#9fa8da" }}>·</span>
-            <span>{totalUnranked} unranked</span>
+            <span>{(tierState?.unranked || []).filter(id => pokemonData[id]).length} unranked</span>
           </div>
 
           <DropdownButton
