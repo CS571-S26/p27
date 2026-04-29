@@ -59,6 +59,72 @@ function InsightCard({ label, value, sub, color = "#e040fb" }) {
   );
 }
 
+
+// ─── Compact favorites grid for Stats page ────────────────────────────────────
+
+function FavoritesGrid({ favIds, pokemonDetails }) {
+  if (favIds.length === 0) return null;
+
+  // Group by generation
+  const byGen = GENERATIONS.map(gen => ({
+    gen,
+    ids: favIds.filter(id => id > gen.offset && id <= gen.offset + gen.limit),
+  })).filter(g => g.ids.length > 0);
+
+  return (
+    <div className="stat-card" style={{ marginTop: 16 }}>
+      <h3 style={{ fontSize: "1.4rem", marginBottom: 4 }}>
+        Your Favorites
+        <span style={{ fontSize: "0.85rem", fontFamily: "Nunito, sans-serif", color: "#9fa8da", marginLeft: 10, fontWeight: 400 }}>
+          {favIds.length} Pokémon
+        </span>
+      </h3>
+      <p style={{ color: "#9fa8da", fontSize: "0.8rem", marginBottom: 16 }}>
+        All your favorited Pokémon, grouped by generation.
+      </p>
+      {byGen.map(({ gen, ids }) => (
+        <div key={gen.label} style={{ marginBottom: 16 }}>
+          <div style={{
+            fontSize: "0.7rem", fontWeight: 800, textTransform: "uppercase",
+            letterSpacing: "0.08em", color: gen.color,
+            marginBottom: 8, paddingBottom: 4,
+            borderBottom: `1px solid ${gen.color}44`,
+            display: "flex", alignItems: "center", gap: 8,
+          }}>
+            <span>{gen.label} — {gen.name}</span>
+            <span style={{ color: "rgba(159,168,218,0.5)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+              ({ids.length})
+            </span>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {ids.map(id => {
+              const p = pokemonDetails[id];
+              return (
+                <div key={id} style={{ textAlign: "center", width: 56 }}>
+                  <img
+                    src={spriteUrl(id)}
+                    alt={p?.name || `#${id}`}
+                    width={52} height={52}
+                    loading="lazy"
+                    style={{ imageRendering: "pixelated", display: "block", margin: "0 auto" }}
+                  />
+                  <div style={{
+                    fontSize: "0.5rem", color: "#9fa8da", textTransform: "capitalize",
+                    lineHeight: 1.2, marginTop: 1,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {p?.name?.replace(/-/g, " ") || `#${id}`}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function StatsPage() {
   const { tierState, favorites } = useApp();
   const location = useLocation();
@@ -322,6 +388,11 @@ export default function StatsPage() {
               </Col>
             )}
           </Row>
+
+          {/* Favorites list — only on favorites tab */}
+          {activeTab === "favorites" && (
+            <FavoritesGrid favIds={favIds} pokemonDetails={pokemonDetails} />
+          )}
         </>
       )}
     </Container>

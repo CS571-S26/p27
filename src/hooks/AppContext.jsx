@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { loadProgress, saveProgress, loadAccount, saveAccount, TIERS } from "../utils/pokeapi";
- 
+
 const AppContext = createContext(null);
- 
+
 // Generate a stable unique ID for a new tier
 function makeTierId() {
   return "tier_" + Math.random().toString(36).slice(2, 8);
 }
- 
+
 // A palette of colors to cycle through for new tiers
 const TIER_COLOR_PALETTE = [
   "#FF7F7F", "#FFBF7F", "#FFFF7F", "#BFFF7F", "#7FFF7F",
@@ -15,11 +15,11 @@ const TIER_COLOR_PALETTE = [
   "#FF7FFF", "#FF7FBF", "#FFB347", "#87CEEB", "#98FB98",
   "#DDA0DD", "#F0E68C", "#E0FFFF", "#FFDAB9", "#C0C0C0",
 ];
- 
+
 function colorForIndex(idx) {
   return TIER_COLOR_PALETTE[idx % TIER_COLOR_PALETTE.length];
 }
- 
+
 function bgFromColor(color) {
   // Convert hex to rgba with low opacity for background
   const r = parseInt(color.slice(1, 3), 16);
@@ -27,46 +27,46 @@ function bgFromColor(color) {
   const b = parseInt(color.slice(5, 7), 16);
   return `rgba(${r},${g},${b},0.12)`;
 }
- 
+
 // Build default tier config from the static TIERS list
 function defaultTierConfig() {
   return TIERS.map(t => ({ ...t }));
 }
- 
+
 export function AppProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() =>
     localStorage.getItem("pokestats_current_user") || null
   );
- 
+
   // Dynamic tier configuration — array of { id, label, color, bg }
   const [tierConfig, setTierConfig] = useState(null);
- 
+
   // Tier state: { [tierId]: [pokemonId,...], unranked: [...] }
   const [tierState, setTierState] = useState(null);
- 
+
   // Favorites: Set of pokemon ids
   const [favorites, setFavorites] = useState(null);
- 
+
   function getUserKey(key) {
     return currentUser ? `user_${currentUser}_${key}` : key;
   }
- 
+
   // Load saved state on mount / user change
   useEffect(() => {
     const savedTierConfig = loadProgress(getUserKey("tierConfig"));
     const config = savedTierConfig || defaultTierConfig();
     setTierConfig(config);
- 
+
     const savedTier = loadProgress(getUserKey("tiers"));
     // Build fresh state with correct keys from config
     const freshState = { unranked: [] };
     config.forEach(t => { freshState[t.id] = []; });
     setTierState(savedTier ? { ...freshState, ...savedTier } : freshState);
- 
+
     const savedFavs = loadProgress(getUserKey("favorites"));
     setFavorites(new Set(savedFavs || []));
   }, [currentUser]);
- 
+
   // Save tierConfig whenever it changes
   useEffect(() => {
     if (tierConfig !== null) {
@@ -74,7 +74,7 @@ export function AppProvider({ children }) {
       if (currentUser) saveAccount(currentUser, { tierConfig });
     }
   }, [tierConfig, currentUser]);
- 
+
   // Save tierState whenever it changes
   useEffect(() => {
     if (tierState !== null) {
@@ -82,7 +82,7 @@ export function AppProvider({ children }) {
       if (currentUser) saveAccount(currentUser, { tiers: tierState });
     }
   }, [tierState, currentUser]);
- 
+
   // Save favorites whenever they change
   useEffect(() => {
     if (favorites !== null) {
@@ -90,7 +90,7 @@ export function AppProvider({ children }) {
       if (currentUser) saveAccount(currentUser, { favorites: Array.from(favorites) });
     }
   }, [favorites, currentUser]);
- 
+
   function login(username) {
     setCurrentUser(username);
     localStorage.setItem("pokestats_current_user", username);
@@ -99,46 +99,45 @@ export function AppProvider({ children }) {
     if (acct?.tiers) setTierState(acct.tiers);
     if (acct?.favorites) setFavorites(new Set(acct.favorites));
   }
- 
+
   function logout() {
     setCurrentUser(null);
     localStorage.removeItem("pokestats_current_user");
   }
- 
+
   // ── Tier config mutations ──────────────────────────────────────────────────
- 
+
   function renameTier(tierId, newLabel) {
     setTierConfig(prev => prev.map(t => t.id === tierId ? { ...t, label: newLabel } : t));
   }
- 
+
   function recolorTier(tierId, newColor) {
     setTierConfig(prev => prev.map(t =>
       t.id === tierId ? { ...t, color: newColor, bg: bgFromColor(newColor) } : t
     ));
   }
- 
-  function addTier(afterTierId = null) {
+
+  // Insert after afterTierId, or append if null. ID generated here so both state updates share it.
+  function insertTierAfter(afterTierId = null) {
+    const newId = makeTierId();
     setTierConfig(prev => {
-      const newId = makeTierId();
-      const idx = prev.length;
-      const color = colorForIndex(idx);
-      const newTier = { id: newId, label: `Tier ${idx + 1}`, color, bg: bgFromColor(color) };
+      const color = colorForIndex(prev.length);
+      const newTier = { id: newId, label: `Tier ${prev.length + 1}`, color, bg: bgFromColor(color) };
       if (!afterTierId) return [...prev, newTier];
       const insertIdx = prev.findIndex(t => t.id === afterTierId);
+      if (insertIdx === -1) return [...prev, newTier];
       const next = [...prev];
       next.splice(insertIdx + 1, 0, newTier);
       return next;
     });
-    // Initialize empty array for new tier in tierState
-    setTierState(prev => prev ? { ...prev, [makeTierId()]: [] } : prev);
+    setTierState(prev => prev ? { ...prev, [newId]: [] } : prev);
   }
- 
+
   function addTierWithId(newTier) {
-    // Used internally when we know the id ahead of time
     setTierConfig(prev => [...prev, newTier]);
     setTierState(prev => prev ? { ...prev, [newTier.id]: [] } : prev);
   }
- 
+
   function removeTier(tierId) {
     setTierConfig(prev => {
       if (prev.length <= 2) return prev; // minimum 2 tiers
@@ -154,7 +153,7 @@ export function AppProvider({ children }) {
       };
     });
   }
- 
+
   function moveTierUp(tierId) {
     setTierConfig(prev => {
       const idx = prev.findIndex(t => t.id === tierId);
@@ -164,7 +163,7 @@ export function AppProvider({ children }) {
       return next;
     });
   }
- 
+
   function moveTierDown(tierId) {
     setTierConfig(prev => {
       const idx = prev.findIndex(t => t.id === tierId);
@@ -174,7 +173,7 @@ export function AppProvider({ children }) {
       return next;
     });
   }
- 
+
   function resetTierConfig() {
     const fresh = defaultTierConfig();
     setTierConfig(fresh);
@@ -188,9 +187,9 @@ export function AppProvider({ children }) {
       return freshState;
     });
   }
- 
+
   // ── Pokemon mutations ──────────────────────────────────────────────────────
- 
+
   function toggleFavorite(pokemonId) {
     setFavorites(prev => {
       const next = new Set(prev);
@@ -198,7 +197,7 @@ export function AppProvider({ children }) {
       return next;
     });
   }
- 
+
   function movePokemon(pokemonId, fromTier, toTier) {
     setTierState(prev => {
       const next = { ...prev };
@@ -208,7 +207,7 @@ export function AppProvider({ children }) {
       return next;
     });
   }
- 
+
   function addToUnranked(pokemonIds) {
     setTierState(prev => {
       const allPlaced = new Set(
@@ -218,24 +217,24 @@ export function AppProvider({ children }) {
       return { ...prev, unranked: [...(prev?.unranked || []), ...newOnes] };
     });
   }
- 
+
   function resetTiers() {
     const freshState = { unranked: [] };
     (tierConfig || defaultTierConfig()).forEach(t => { freshState[t.id] = []; });
     setTierState(freshState);
     setFavorites(new Set());
   }
- 
+
   const totalRanked = tierState && tierConfig
     ? tierConfig.reduce((s, t) => s + (tierState[t.id]?.length || 0), 0)
     : 0;
   const totalUnranked = tierState?.unranked?.length || 0;
- 
+
   return (
     <AppContext.Provider value={{
       currentUser, login, logout,
       tierConfig, setTierConfig,
-      renameTier, recolorTier, addTier, addTierWithId, removeTier,
+      renameTier, recolorTier, insertTierAfter, addTierWithId, removeTier,
       moveTierUp, moveTierDown, resetTierConfig,
       tierState, setTierState, movePokemon, addToUnranked, resetTiers,
       favorites, setFavorites, toggleFavorite,
@@ -245,7 +244,7 @@ export function AppProvider({ children }) {
     </AppContext.Provider>
   );
 }
- 
+
 export function useApp() {
   return useContext(AppContext);
 }

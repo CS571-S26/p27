@@ -258,7 +258,7 @@ function ResetConfigModal({ onConfirm, onCancel }) {
 
 export default function TierListPage() {
   const {
-    tierConfig, renameTier, recolorTier, addTierWithId, removeTier,
+    tierConfig, renameTier, recolorTier, insertTierAfter, removeTier,
     moveTierUp, moveTierDown, resetTierConfig,
     tierState, movePokemon, addToUnranked, totalRanked,
   } = useApp();
@@ -270,10 +270,9 @@ export default function TierListPage() {
   const [deletingTierId, setDeletingTierId] = useState(null);
   const [showResetModal, setShowResetModal] = useState(false);
 
-  // Add a new tier (appends to end, since insert-after requires context refactor)
-  function handleAddTier() {
+  function handleAddTier(afterTierId = null) {
     if (!tierConfig || tierConfig.length >= 20) return;
-    addTierWithId(makeTier(tierConfig.length));
+    insertTierAfter(afterTierId);
   }
 
   async function loadGeneration(genIdx) {
@@ -405,7 +404,7 @@ export default function TierListPage() {
                 canDelete={tierConfig.length > 2}
               />
               <AddTierDivider
-                onClick={handleAddTier}
+                onClick={() => handleAddTier(tier.id)}
                 disabled={tierConfig.length >= 20 || idx === tierConfig.length - 1}
               />
             </React.Fragment>
