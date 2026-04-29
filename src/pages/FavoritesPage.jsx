@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Container, Badge } from "react-bootstrap";
 import { useApp } from "../hooks/AppContext";
-import { fetchPokemonList, fetchPokemon, GENERATIONS, spriteUrl, TYPE_COLORS } from "../utils/pokeapi";
+import { fetchPokemonList, fetchPokemon, GENERATIONS, spriteUrl, TYPE_COLORS, getGenGradient, getGenColors } from "../utils/pokeapi";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useNavigate } from "react-router-dom";
 
@@ -9,10 +9,12 @@ import { useNavigate } from "react-router-dom";
 
 function FavCard({ id, name, types, selected, onToggle }) {
   return (
-    <div
+    <button
       className={`fav-card ${selected ? "selected" : ""}`}
       onClick={() => onToggle(id)}
-      title={name}
+      aria-pressed={selected}
+      aria-label={`${selected ? "Remove" : "Add"} ${name.replace(/-/g, " ")} ${selected ? "from" : "to"} favorites`}
+      style={{ textAlign: "center" }}
     >
       <img src={spriteUrl(id)} alt={name} width={72} height={72}
         loading="lazy" style={{ imageRendering: "pixelated" }} />
@@ -25,7 +27,7 @@ function FavCard({ id, name, types, selected, onToggle }) {
       {selected && (
         <div style={{ position: "absolute", top: 4, right: 4, fontSize: "0.8rem" }}>❤️</div>
       )}
-    </div>
+    </button>
   );
 }
 
@@ -59,6 +61,8 @@ function FavoritesSidebar({ favorites, pokemonData, onRemove, open, onToggle }) 
       {/* Toggle button */}
       <button
         onClick={onToggle}
+        aria-expanded={open}
+        aria-label={open ? "Collapse favorites panel" : "Expand favorites panel"}
         style={{
           background: "none", border: "none", cursor: "pointer",
           padding: "10px 0", display: "flex", alignItems: "center",
@@ -95,9 +99,13 @@ function FavoritesSidebar({ favorites, pokemonData, onRemove, open, onToggle }) 
             <div key={gen.label} style={{ marginBottom: 12 }}>
               <div style={{
                 fontSize: "0.65rem", fontWeight: 800, textTransform: "uppercase",
-                letterSpacing: "0.08em", color: gen.color,
-                marginBottom: 6, paddingBottom: 3,
-                borderBottom: `1px solid ${gen.color}44`,
+                letterSpacing: "0.08em", color: "white",
+                marginBottom: 6, paddingBottom: 4,
+                borderBottom: `1px solid ${gen.color}55`,
+                background: getGenGradient(gen, "90deg"),
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
               }}>
                 {gen.label} — {gen.name} ({ids.length})
               </div>
@@ -124,7 +132,7 @@ function FavoritesSidebar({ favorites, pokemonData, onRemove, open, onToggle }) 
                       {/* Click to remove */}
                       <button
                         onClick={e => { e.stopPropagation(); onRemove(id); }}
-                        title="Remove from favorites"
+                        aria-label={`Remove ${p?.name?.replace(/-/g," ") || id} from favorites`}
                         style={{
                           position: "absolute", top: 0, right: 0,
                           background: "rgba(229,57,53,0.85)", border: "none",
@@ -200,7 +208,7 @@ export default function FavoritesPage() {
       <div style={{ flex: 1, minWidth: 0 }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-          <h2 style={{ fontSize: "2.2rem", margin: 0 }}>Favorites Picker</h2>
+          <h1 style={{ fontSize: "2.2rem", margin: 0 }}>Favorites Picker</h1>
           <div className="progress-pill">
             <span style={{ color: "#EE99AC" }}>❤️ {favCount} favorites</span>
           </div>

@@ -65,6 +65,7 @@ function TierLabel({ tier, onRename, onRecolor, onMoveUp, onMoveDown, onDelete, 
           }}
           autoFocus
           maxLength={12}
+          aria-label={`Rename tier ${tier.label}`}
           style={{
             width: 58, textAlign: "center",
             background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.5)",
@@ -73,54 +74,69 @@ function TierLabel({ tier, onRename, onRecolor, onMoveUp, onMoveDown, onDelete, 
           }}
         />
       ) : (
-        <span
-          title="Click to rename"
+        <button
+          aria-label={`Rename tier: ${tier.label}`}
           onClick={() => { setDraft(tier.label); setEditing(true); setTimeout(() => inputRef.current?.select(), 10); }}
           style={{
+            background: "none", border: "none", padding: 0,
             fontFamily: "Bangers, cursive",
             fontSize: tier.label.length > 5 ? "0.9rem" : tier.label.length > 3 ? "1.3rem" : "1.9rem",
             lineHeight: 1.1, textAlign: "center", wordBreak: "break-all",
-            cursor: "pointer", userSelect: "none",
+            cursor: "pointer", userSelect: "none", color: "inherit",
             textShadow: "1px 1px 3px rgba(0,0,0,0.4)",
           }}
         >
           {tier.label}
-        </span>
+        </button>
       )}
 
-      {/* Mini icon controls */}
-      <div style={{ display: "flex", gap: 3, justifyContent: "center", flexWrap: "wrap" }}>
-        <OverlayTrigger placement="right" overlay={<Tooltip>Change color</Tooltip>}>
-          <label style={{ cursor: "pointer", lineHeight: 1, margin: 0 }}>
-            <input
-              type="color" value={tier.color}
-              onChange={e => onRecolor(tier.id, e.target.value)}
-              style={{ width: 0, height: 0, opacity: 0, position: "absolute", pointerEvents: "none" }}
-            />
-            <span style={{ fontSize: "0.7rem" }}>🎨</span>
-          </label>
-        </OverlayTrigger>
-
-        {!isFirst && (
-          <OverlayTrigger placement="right" overlay={<Tooltip>Move up</Tooltip>}>
-            <span style={{ fontSize: "0.7rem", cursor: "pointer", opacity: 0.8 }}
-              onClick={() => onMoveUp(tier.id)}>▲</span>
-          </OverlayTrigger>
+      {/* Controls: ▲▼ left group, 🎨✕ right group — inline when space allows, wraps to centered row otherwise */}
+      <div style={{
+        display: "flex", gap: 2, justifyContent: "center",
+        alignItems: "center", flexWrap: "wrap", marginTop: 2,
+      }}>
+        {/* Move arrows — left side of the row */}
+        {(!isFirst || !isLast) && (
+          <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
+            {!isFirst && (
+              <OverlayTrigger placement="right" overlay={<Tooltip>Move up</Tooltip>}>
+                <button aria-label={`Move ${tier.label} tier up`}
+                  onClick={() => onMoveUp(tier.id)}
+                  style={{ background:"none", border:"none", padding:"1px 2px", cursor:"pointer", fontSize:"0.75rem", opacity:0.85, lineHeight:1, color:"inherit" }}>▲</button>
+              </OverlayTrigger>
+            )}
+            {!isLast && (
+              <OverlayTrigger placement="right" overlay={<Tooltip>Move down</Tooltip>}>
+                <button aria-label={`Move ${tier.label} tier down`}
+                  onClick={() => onMoveDown(tier.id)}
+                  style={{ background:"none", border:"none", padding:"1px 2px", cursor:"pointer", fontSize:"0.75rem", opacity:0.85, lineHeight:1, color:"inherit" }}>▼</button>
+              </OverlayTrigger>
+            )}
+          </div>
         )}
 
-        {!isLast && (
-          <OverlayTrigger placement="right" overlay={<Tooltip>Move down</Tooltip>}>
-            <span style={{ fontSize: "0.7rem", cursor: "pointer", opacity: 0.8 }}
-              onClick={() => onMoveDown(tier.id)}>▼</span>
+        {/* Color + delete — always together on the right */}
+        <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+          <OverlayTrigger placement="right" overlay={<Tooltip>Change color</Tooltip>}>
+            <label aria-label={`Change color for ${tier.label} tier`} style={{ cursor: "pointer", lineHeight: 1, margin: 0 }}>
+              <input
+                type="color" value={tier.color}
+                onChange={e => onRecolor(tier.id, e.target.value)}
+                style={{ width: 0, height: 0, opacity: 0, position: "absolute" }}
+              />
+              <span style={{ fontSize: "0.75rem" }}>🎨</span>
+            </label>
           </OverlayTrigger>
-        )}
 
-        {canDelete && (
-          <OverlayTrigger placement="right" overlay={<Tooltip>Delete tier</Tooltip>}>
-            <span style={{ fontSize: "0.7rem", cursor: "pointer", color: "rgba(255,120,120,0.9)" }}
-              onClick={() => onDelete(tier.id)}>✕</span>
-          </OverlayTrigger>
-        )}
+          {canDelete && (
+            <OverlayTrigger placement="right" overlay={<Tooltip>Delete tier</Tooltip>}>
+              <button
+                aria-label={`Delete ${tier.label} tier`}
+                onClick={() => onDelete(tier.id)}
+                style={{ background:"none", border:"none", padding:"1px 2px", cursor:"pointer", fontSize:"0.75rem", color:"rgba(255,120,120,0.9)", lineHeight:1 }}>✕</button>
+            </OverlayTrigger>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -167,6 +183,7 @@ function TierRow({ tier, pokemon, onDrop, onRemove, onRename, onRecolor, onMoveU
               }
             />
             <button
+              aria-label={`Remove ${p.name} from ${tier.label} tier`}
               onClick={() => onRemove(p.id, tier.id)}
               style={{
                 position: "absolute", top: 2, right: 2,
@@ -321,7 +338,7 @@ export default function TierListPage() {
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
-          <h2 style={{ fontSize: "2rem", margin: 0 }}>Tier List</h2>
+          <h1 style={{ fontSize: "2rem", margin: 0 }}>Tier List</h1>
           <div className="progress-pill">
             <span style={{ color: "#78C850" }}>✓ {totalRanked} ranked</span>
             <span style={{ color: "#9fa8da" }}>·</span>
@@ -434,13 +451,16 @@ export default function TierListPage() {
 
       {/* ── Sidebar ── */}
       <div>
-        <div style={{ fontFamily: "Bangers, cursive", fontSize: "1.3rem", marginBottom: 6, color: "#9fa8da" }}>
+        <h2 style={{ fontFamily: "Bangers, cursive", fontSize: "1.3rem", marginBottom: 6, color: "#9fa8da" }}>
           Unranked ({loadedUnrankedCount})
-        </div>
+        </h2>
+        <label htmlFor="sidebar-search" className="visually-hidden">Filter unranked Pokémon</label>
         <input
+          id="sidebar-search"
           value={sidebarSearch}
           onChange={e => setSidebarSearch(e.target.value)}
-          placeholder="Filter..."
+          placeholder="Filter Pokémon..."
+          aria-label="Filter unranked Pokémon"
           style={{
             width: "100%", marginBottom: 6, padding: "4px 8px",
             background: "#16213e", border: "1px solid #0f3460",

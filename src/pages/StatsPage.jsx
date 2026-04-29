@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Container, Row, Col, Tab, Tabs } from "react-bootstrap";
 import { useLocation } from "react-router-dom";
 import { useApp } from "../hooks/AppContext";
-import { fetchPokemon, TYPE_COLORS, GENERATIONS, TIERS, spriteUrl } from "../utils/pokeapi";
+import { fetchPokemon, TYPE_COLORS, GENERATIONS, TIERS, spriteUrl, getGenGradient } from "../utils/pokeapi";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 // Simple horizontal bar chart
@@ -73,12 +73,12 @@ function FavoritesGrid({ favIds, pokemonDetails }) {
 
   return (
     <div className="stat-card" style={{ marginTop: 16 }}>
-      <h3 style={{ fontSize: "1.4rem", marginBottom: 4 }}>
+      <h2 style={{ fontSize: "1.4rem", marginBottom: 4 }}>
         Your Favorites
         <span style={{ fontSize: "0.85rem", fontFamily: "Nunito, sans-serif", color: "#9fa8da", marginLeft: 10, fontWeight: 400 }}>
           {favIds.length} Pokémon
         </span>
-      </h3>
+      </h2>
       <p style={{ color: "#9fa8da", fontSize: "0.8rem", marginBottom: 16 }}>
         All your favorited Pokémon, grouped by generation.
       </p>
@@ -86,10 +86,14 @@ function FavoritesGrid({ favIds, pokemonDetails }) {
         <div key={gen.label} style={{ marginBottom: 16 }}>
           <div style={{
             fontSize: "0.7rem", fontWeight: 800, textTransform: "uppercase",
-            letterSpacing: "0.08em", color: gen.color,
+            letterSpacing: "0.08em",
             marginBottom: 8, paddingBottom: 4,
-            borderBottom: `1px solid ${gen.color}44`,
+            borderBottom: `1px solid ${gen.color}55`,
             display: "flex", alignItems: "center", gap: 8,
+            background: getGenGradient(gen, "90deg"),
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
           }}>
             <span>{gen.label} — {gen.name}</span>
             <span style={{ color: "rgba(159,168,218,0.5)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
@@ -260,7 +264,7 @@ export default function StatsPage() {
 
   return (
     <Container fluid className="py-3">
-      <h2 style={{ fontSize: "2.2rem", marginBottom: 4 }}>My Stats</h2>
+      <h1 style={{ fontSize: "2.2rem", marginBottom: 4 }}>My Stats</h1>
       <p style={{ color: "#9fa8da", fontSize: "0.88rem", marginBottom: 16 }}>
         What do your rankings say about you? Discover your mathematically favorite type, generation, and more.
       </p>
@@ -313,7 +317,7 @@ export default function StatsPage() {
             {/* Type distribution */}
             <Col xs={12} md={6}>
               <div className="stat-card">
-                <h3 style={{ fontSize: "1.4rem", marginBottom: 16 }}>Type Distribution</h3>
+                <h2 style={{ fontSize: "1.4rem", marginBottom: 16 }}>Type Distribution</h2>
                 <BarChart
                   data={Object.entries(stats.typeCounts).map(([key, value]) => ({ key, value }))}
                   colorFn={k => TYPE_COLORS[k] || "#888"}
@@ -324,12 +328,12 @@ export default function StatsPage() {
             {/* Generation distribution */}
             <Col xs={12} md={6}>
               <div className="stat-card">
-                <h3 style={{ fontSize: "1.4rem", marginBottom: 16 }}>Generation Distribution</h3>
+                <h2 style={{ fontSize: "1.4rem", marginBottom: 16 }}>Generation Distribution</h2>
                 <BarChart
                   data={Object.entries(stats.genCounts).filter(([, v]) => v > 0).map(([key, value]) => ({ key, value }))}
                   colorFn={k => {
                     const g = GENERATIONS.find(g => g.label === k);
-                    return g?.color || "#888";
+                    return g ? getGenGradient(g, "90deg") : "#888";
                   }}
                 />
               </div>
@@ -338,7 +342,7 @@ export default function StatsPage() {
             {/* Average stats */}
             <Col xs={12} md={6}>
               <div className="stat-card">
-                <h3 style={{ fontSize: "1.4rem", marginBottom: 16 }}>Average Base Stats</h3>
+                <h2 style={{ fontSize: "1.4rem", marginBottom: 16 }}>Average Base Stats</h2>
                 {Object.entries(stats.avgStats).map(([k, v]) => (
                   <StatBar key={k} label={k.replace("special-", "sp.")} value={v} />
                 ))}
@@ -348,12 +352,12 @@ export default function StatsPage() {
             {/* Weight & height */}
             <Col xs={12} md={6}>
               <div className="stat-card">
-                <h3 style={{ fontSize: "1.4rem", marginBottom: 16 }}>Weight Preferences</h3>
+                <h2 style={{ fontSize: "1.4rem", marginBottom: 16 }}>Weight Preferences</h2>
                 <BarChart
                   data={Object.entries(stats.weightBrackets).map(([key, value]) => ({ key, value }))}
                   colorFn={() => "linear-gradient(90deg, #1565c0, #6890F0)"}
                 />
-                <h3 style={{ fontSize: "1.4rem", margin: "20px 0 16px" }}>Height Preferences</h3>
+                <h2 style={{ fontSize: "1.4rem", margin: "20px 0 16px" }}>Height Preferences</h2>
                 <BarChart
                   data={Object.entries(stats.heightBrackets).map(([key, value]) => ({ key, value }))}
                   colorFn={() => "linear-gradient(90deg, #2e7d32, #78C850)"}
@@ -364,7 +368,7 @@ export default function StatsPage() {
             {/* Egg groups */}
             <Col xs={12} md={6}>
               <div className="stat-card">
-                <h3 style={{ fontSize: "1.4rem", marginBottom: 16 }}>Egg Groups</h3>
+                <h2 style={{ fontSize: "1.4rem", marginBottom: 16 }}>Egg Groups</h2>
                 <BarChart
                   data={Object.entries(stats.eggCounts).map(([key, value]) => ({ key, value }))}
                   colorFn={() => "linear-gradient(90deg, #6a1b9a, #e040fb)"}
@@ -376,7 +380,7 @@ export default function StatsPage() {
             {activeTab === "tier" && (
               <Col xs={12} md={6}>
                 <div className="stat-card">
-                  <h3 style={{ fontSize: "1.4rem", marginBottom: 16 }}>Tier Distribution</h3>
+                  <h2 style={{ fontSize: "1.4rem", marginBottom: 16 }}>Tier Distribution</h2>
                   <BarChart
                     data={Object.entries(stats.tierDist).map(([key, value]) => ({ key, value }))}
                     colorFn={k => {

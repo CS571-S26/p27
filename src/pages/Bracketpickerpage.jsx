@@ -123,8 +123,10 @@ function favoritesToTiers(favoriteIds) {
 
 function BracketCard({ id, name, types, selected, onClick, size = 100 }) {
   return (
-    <div
+    <button
       onClick={() => onClick(id)}
+      aria-pressed={selected}
+      aria-label={`${selected ? "Deselect" : "Select"} ${name?.replace(/-/g," ") || id}`}
       style={{
         background: selected ? "rgba(224,64,251,0.2)" : "rgba(22,33,62,0.8)",
         border: `2px solid ${selected ? "#e040fb" : "rgba(15,52,96,0.8)"}`,
@@ -151,7 +153,7 @@ function BracketCard({ id, name, types, selected, onClick, size = 100 }) {
       {types?.map(t => (
         <span key={t} className="type-badge" style={{ background: TYPE_COLORS[t] || "#888" }}>{t}</span>
       ))}
-    </div>
+    </button>
   );
 }
 
@@ -418,7 +420,7 @@ export default function BracketPickerPage() {
   if (mode === MODE_SELECT) {
     return (
       <Container fluid className="py-3" style={{ maxWidth: 900 }}>
-        <h2 style={{ fontSize: "2.2rem", marginBottom: 8 }}>Bracket Picker</h2>
+        <h1 style={{ fontSize: "2.2rem", marginBottom: 8 }}>Bracket Picker</h1>
         <p style={{ color: "#9fa8da", fontSize: "0.88rem", marginBottom: 28 }}>
           Pick your favorites from batches repeatedly until everything is ranked. Choose a mode:
         </p>
@@ -461,7 +463,7 @@ export default function BracketPickerPage() {
       <Container fluid className="py-3" style={{ maxWidth: 900 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <Button variant="link" onClick={resetAll} style={{ color: "#9fa8da", padding: 0 }}>← Back</Button>
-          <h2 style={{ fontSize: "2.2rem", margin: 0 }}>Free Bracket</h2>
+          <h1 style={{ fontSize: "2.2rem", margin: 0 }}>Free Bracket</h1>
         </div>
         <div style={{
           background: "rgba(22,33,62,0.6)", border: "1px solid rgba(15,52,96,0.8)",
@@ -512,9 +514,9 @@ export default function BracketPickerPage() {
       <Container fluid className="py-3" style={{ maxWidth: 1100 }}>
         <div style={{ textAlign: "center", padding: "20px 0 24px" }}>
           <div style={{ fontSize: "3rem", marginBottom: 8 }}>🎉</div>
-          <h2 style={{ fontFamily: "Bangers, cursive", fontSize: "3rem", color: "#fdd835" }}>
+          <h1 style={{ fontFamily: "Bangers, cursive", fontSize: "3rem", color: "#fdd835" }}>
             Full Ranking Complete!
-          </h2>
+          </h1>
           <p style={{ color: "#9fa8da", marginBottom: 20 }}>
             All {fullRanking.length} Pokémon precisely ranked from #1 to #{fullRanking.length}
           </p>
@@ -574,7 +576,7 @@ export default function BracketPickerPage() {
       <Container fluid className="py-3" style={{ maxWidth: 1100 }}>
         <div style={{ textAlign: "center", padding: "20px 0 30px" }}>
           <div style={{ fontSize: "3rem", marginBottom: 8 }}>🎉</div>
-          <h2 style={{ fontFamily: "Bangers, cursive", fontSize: "3rem", color: "#fdd835" }}>Complete!</h2>
+          <h1 style={{ fontFamily: "Bangers, cursive", fontSize: "3rem", color: "#fdd835" }}>Complete!</h1>
           <p style={{ color: "#9fa8da", marginBottom: 20 }}>You've ranked all {ps.favorites.length} Pokémon!</p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Button className="btn-poke-primary" onClick={() => setShowConvertModal(true)} style={{ fontSize: "1rem" }}>
@@ -620,7 +622,7 @@ export default function BracketPickerPage() {
     <Container fluid className="py-3" style={{ maxWidth: 1100 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
         <Button variant="link" onClick={resetAll} style={{ color: "#9fa8da", padding: 0 }}>← Back</Button>
-        <h2 style={{ fontSize: "2rem", margin: 0 }}>
+        <h1 style={{ fontSize: "2rem", margin: 0 }}>
           {isTierSort ? (
             <span>
               Sorting{" "}
@@ -632,7 +634,7 @@ export default function BracketPickerPage() {
               </span>
             </span>
           ) : "Free Bracket"}
-        </h2>
+        </h1>
         <div className="progress-pill">
           {isTierSort ? (
             <span style={{ color: "#fdd835" }}>{completedTiers.length} of {tierQueue.length} tiers sorted</span>
