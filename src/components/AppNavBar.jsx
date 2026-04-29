@@ -29,6 +29,7 @@ export default function AppNavBar() {
                 )}
               </Nav.Link>
               <Nav.Link as={NavLink} to="/favorites">Favorites Picker</Nav.Link>
+              <Nav.Link as={NavLink} to="/bracket">Bracket Picker</Nav.Link>
               <Nav.Link as={NavLink} to="/stats">My Stats</Nav.Link>
             </Nav>
             <Nav>

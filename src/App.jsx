@@ -6,6 +6,7 @@ import HomePage from "./pages/HomePage";
 import TierListPage from "./pages/TierListPage";
 import FavoritesPage from "./pages/FavoritesPage";
 import StatsPage from "./pages/StatsPage";
+import BracketPickerPage from "./pages/BracketPickerPage";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/tierlist" element={<TierListPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />
           <Route path="/stats" element={<StatsPage />} />
+          <Route path="/bracket" element={<BracketPickerPage />} />
         </Routes>
       </BrowserRouter>
     </AppProvider>
