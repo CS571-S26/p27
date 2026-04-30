@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Container, Badge } from "react-bootstrap";
 import { useApp } from "../hooks/AppContext";
-import { fetchPokemonList, fetchPokemon, GENERATIONS, spriteUrl, TYPE_COLORS, getGenGradient, getGenColors } from "../utils/pokeapi";
+import { fetchPokemonList, fetchPokemon, GENERATIONS, spriteUrl, formSpriteUrl, TYPE_COLORS, getGenGradient, ALTERNATE_FORMS, fetchFormPokemon } from "../utils/pokeapi";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useNavigate } from "react-router-dom";
 
@@ -158,7 +158,7 @@ function FavoritesSidebar({ favorites, pokemonData, onRemove, open, onToggle }) 
 
 export default function FavoritesPage() {
   const navigate = useNavigate();
-  const { favorites, toggleFavorite } = useApp();
+  const { favorites, toggleFavorite, formSettings } = useApp();
   const [activeGenIdx, setActiveGenIdx] = useState(0);
   const [pokemonData, setPokemonData] = useState({});
   const [loadedGens, setLoadedGens] = useState(new Set());
@@ -166,6 +166,28 @@ export default function FavoritesPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => { loadGen(activeGenIdx); }, [activeGenIdx]);
+
+  // Load form data when formSettings changes
+  const [formPokemonData, setFormPokemonData] = useState({});
+  useEffect(() => {
+    if (!formSettings) return;
+    const enabled = ALTERNATE_FORMS.filter(f => formSettings[f.formType]);
+    const missing = enabled.filter(f => !formPokemonData[f.name]);
+    if (!missing.length) return;
+    Promise.all(missing.map(async form => {
+      try {
+        const r = await fetchFormPokemon(form.name);
+        return [form.name, {
+          id: form.name, name: form.display, formName: form.name,
+          types: r.types.map(t => t.type.name),
+          isForm: true, formType: form.formType, baseSpecies: form.base,
+        }];
+      } catch { return null; }
+    })).then(results => {
+      const details = Object.fromEntries(results.filter(Boolean));
+      setFormPokemonData(prev => ({ ...prev, ...details }));
+    });
+  }, [formSettings]);
 
   async function loadGen(idx) {
     if (loadedGens.has(idx)) return;
@@ -282,6 +304,61 @@ export default function FavoritesPage() {
       />
 
       {/* ── Floating "View Stats" button ── */}
+      {/* Alternate forms section */}
+      {formSettings && Object.entries(formSettings).some(([, v]) => v) && (
+        <div style={{ marginTop: 24 }}>
+          {['mega','gmax','regional','other'].filter(ft => formSettings[ft]).map(ft => {
+            const forms = ALTERNATE_FORMS.filter(f => f.formType === ft);
+            return (
+              <div key={ft} style={{ marginBottom: 20 }}>
+                <div style={{
+                  fontFamily: "Bangers, cursive", fontSize: "1.2rem",
+                  marginBottom: 10, color: "#9fa8da",
+                  display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  <span>
+                    {{ mega:"⚡ Mega Evolutions", gmax:"🌀 Gigantamax Forms",
+                       regional:"🌏 Regional Variants", other:"✨ Other Notable Forms" }[ft]}
+                  </span>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 400 }}>({forms.length})</span>
+                </div>
+                <div className="favorites-grid">
+                  {forms.map(form => {
+                    const p = formPokemonData[form.name];
+                    const sel = favorites?.has(form.name);
+                    return (
+                      <button
+                        key={form.name}
+                        className={`fav-card ${sel ? "selected" : ""}`}
+                        onClick={() => toggleFavorite(form.name)}
+                        aria-pressed={sel}
+                        aria-label={`${sel ? "Remove" : "Add"} ${form.display} ${sel ? "from" : "to"} favorites`}
+                        style={{ textAlign: "center" }}
+                      >
+                        <img
+                          src={formSpriteUrl(form.name)}
+                          alt={form.display}
+                          width={72} height={72}
+                          loading="lazy"
+                          style={{ imageRendering: "pixelated" }}
+                        />
+                        <div style={{
+                          fontSize: "0.62rem", fontWeight: 700,
+                          color: sel ? "#e040fb" : "#9fa8da", marginTop: 4,
+                        }}>
+                          {form.display}
+                        </div>
+                        {sel && <div style={{ position: "absolute", top: 4, right: 4, fontSize: "0.8rem" }}>❤️</div>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {favCount > 0 && (
         <div
           onClick={() => navigate("/stats", { state: { tab: "favorites" } })}

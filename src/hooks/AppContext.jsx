@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { loadProgress, saveProgress, loadAccount, saveAccount, TIERS } from "../utils/pokeapi";
+import { loadProgress, saveProgress, loadAccount, saveAccount, TIERS, ALTERNATE_FORMS } from "../utils/pokeapi";
 
 const AppContext = createContext(null);
 
@@ -47,6 +47,11 @@ export function AppProvider({ children }) {
   // Favorites: Set of pokemon ids
   const [favorites, setFavorites] = useState(null);
 
+  // Form settings: which alternate form types to include in rankings
+  // { mega: bool, gmax: bool, regional: bool, other: bool }
+  const DEFAULT_FORM_SETTINGS = { mega: false, gmax: false, regional: false, other: false };
+  const [formSettings, setFormSettings] = useState(null);
+
   function getUserKey(key) {
     return currentUser ? `user_${currentUser}_${key}` : key;
   }
@@ -65,6 +70,9 @@ export function AppProvider({ children }) {
 
     const savedFavs = loadProgress(getUserKey("favorites"));
     setFavorites(new Set(savedFavs || []));
+
+    const savedFormSettings = loadProgress(getUserKey("formSettings"));
+    setFormSettings(savedFormSettings || { mega: false, gmax: false, regional: false, other: false });
   }, [currentUser]);
 
   // Save tierConfig whenever it changes
@@ -82,6 +90,14 @@ export function AppProvider({ children }) {
       if (currentUser) saveAccount(currentUser, { tiers: tierState });
     }
   }, [tierState, currentUser]);
+
+  // Save formSettings whenever it changes
+  useEffect(() => {
+    if (formSettings !== null) {
+      saveProgress(getUserKey("formSettings"), formSettings);
+      if (currentUser) saveAccount(currentUser, { formSettings });
+    }
+  }, [formSettings, currentUser]);
 
   // Save favorites whenever they change
   useEffect(() => {
@@ -124,6 +140,7 @@ export function AppProvider({ children }) {
     if (acct?.tierConfig) setTierConfig(acct.tierConfig);
     if (acct?.tiers) setTierState(acct.tiers);
     if (acct?.favorites) setFavorites(new Set(acct.favorites));
+    if (acct?.formSettings) setFormSettings(acct.formSettings);
   }
 
   function logout() {
@@ -205,6 +222,46 @@ export function AppProvider({ children }) {
     });
   }
 
+  // ── Form settings ─────────────────────────────────────────────────────────
+
+  // Toggle a form type on or off. When turning on, adds those forms to unranked.
+  // When turning off, removes them from all tiers and unranked (with no confirmation
+  // here — UI layer should confirm if any are ranked).
+  function updateFormSetting(formType, enabled) {
+    setFormSettings(prev => ({ ...prev, [formType]: enabled }));
+
+    const affected = ALTERNATE_FORMS
+      .filter(f => f.formType === formType)
+      .map(f => f.name);
+
+    if (enabled) {
+      // Add to unranked pool (addToUnranked handles deduplication)
+      setTierState(prev => {
+        if (!prev) return prev;
+        const allPlaced = new Set(Object.values(prev).flat());
+        const newOnes = affected.filter(name => !allPlaced.has(name));
+        return { ...prev, unranked: [...prev.unranked, ...newOnes] };
+      });
+    } else {
+      // Remove from everywhere
+      setTierState(prev => {
+        if (!prev) return prev;
+        const removeSet = new Set(affected);
+        const next = {};
+        for (const [key, ids] of Object.entries(prev)) {
+          next[key] = ids.filter(id => !removeSet.has(id));
+        }
+        return next;
+      });
+      // Also remove from favorites
+      setFavorites(prev => {
+        const next = new Set(prev);
+        affected.forEach(name => next.delete(name));
+        return next;
+      });
+    }
+  }
+
   // ── Pokemon mutations ──────────────────────────────────────────────────────
 
   function toggleFavorite(pokemonId) {
@@ -257,6 +314,7 @@ export function AppProvider({ children }) {
       favorites, setFavorites, toggleFavorite,
       totalRanked, totalUnranked,
       bracketSession, saveBracketSession, clearBracketSession,
+      formSettings, updateFormSetting,
     }}>
       {children}
     </AppContext.Provider>

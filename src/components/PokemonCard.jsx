@@ -1,17 +1,28 @@
 import React from "react";
-import { spriteUrl, TYPE_COLORS, getAccessibleVersionColors, versionGradient } from "../utils/pokeapi";
+import { spriteUrl, formSpriteUrl, TYPE_COLORS, getAccessibleVersionColors, versionGradient } from "../utils/pokeapi";
+
+// Types whose background is light enough to need dark text for WCAG AA contrast
+const LIGHT_TYPES = new Set([
+  'normal', 'electric', 'ice', 'ground', 'flying',
+  'bug', 'rock', 'steel', 'fairy', 'grass', 'psychic', 'poison',
+]);
 
 export default function PokemonCard({
   id, name, types = [],
+  formName = null,  // if set, this is an alternate form — use name-based sprite
   dragging = false, onClick, selected = false,
   size = "normal", // "normal" | "small" | "large"
   draggable = true, onDragStart, onDragEnd,
 }) {
   const imgSize = size === "small" ? 48 : size === "large" ? 96 : 64;
+  const isForm = !!formName;
 
-  // Build the version-based gradient for this pokemon's name label
-  const versionColors = getAccessibleVersionColors(id);
+  // Version gradient: forms use a neutral gradient since they span multiple games
+  const versionColors = isForm ? ["#AAAACC", "#8888BB"] : getAccessibleVersionColors(id);
   const gradient = versionGradient(versionColors);
+
+  // Sprite: forms use name-based URL, regular pokemon use numeric ID
+  const sprite = isForm ? formSpriteUrl(formName) : spriteUrl(id);
 
   return (
     <div
@@ -32,7 +43,7 @@ export default function PokemonCard({
       </div>
 
       <img
-        src={spriteUrl(id)}
+        src={sprite}
         alt={name}
         width={imgSize}
         height={imgSize}
@@ -60,8 +71,7 @@ export default function PokemonCard({
       {types.length > 0 && (
         <div style={{ marginTop: 2 }}>
           {types.map(t => {
-            const lightTypes = new Set(['normal','electric','ice','ground','flying','bug','rock','steel','fairy','grass','psychic','poison']);
-            const textColor = lightTypes.has(t) ? "#1a1a1a" : "white";
+            const textColor = LIGHT_TYPES.has(t) ? "#1a1a1a" : "white";
             return (
               <span key={t} className="type-badge"
                 style={{ background: TYPE_COLORS[t] || "#888", color: textColor, textShadow: "none" }}>

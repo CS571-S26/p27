@@ -1,7 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button, Dropdown, DropdownButton, Modal, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { useApp } from "../hooks/AppContext";
-import { fetchPokemonList, fetchPokemon, GENERATIONS } from "../utils/pokeapi";
+import { fetchPokemonList, fetchPokemon, GENERATIONS, ALTERNATE_FORMS, fetchFormPokemon } from "../utils/pokeapi";
+import FormSettingsPanel from "../components/FormSettingsPanel";
 import PokemonCard from "../components/PokemonCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 
@@ -156,6 +157,7 @@ function TierRow({ tier, pokemon, onDrop, onRemove, onRename, onRecolor, onMoveU
           <div key={p.id} style={{ position: "relative" }}>
             <PokemonCard
               id={p.id} name={p.name} types={p.types} size="small"
+              formName={p.formName || null}
               onDragStart={e =>
                 e.dataTransfer.setData("text/plain", JSON.stringify({ id: p.id, fromTier: tier.id }))
               }
@@ -256,6 +258,7 @@ export default function TierListPage() {
     tierConfig, renameTier, recolorTier, insertTierAfter, removeTier,
     moveTierUp, moveTierDown, resetTierConfig,
     tierState, movePokemon, addToUnranked, totalRanked,
+    formSettings,
   } = useApp();
 
   const [pokemonData, setPokemonData] = useState({});
@@ -269,6 +272,41 @@ export default function TierListPage() {
     if (!tierConfig || tierConfig.length >= 20) return;
     insertTierAfter(afterTierId);
   }
+
+  // Load pokemon data for alternate forms when their type is enabled
+  useEffect(() => {
+    if (!formSettings) return;
+    const enabledForms = ALTERNATE_FORMS.filter(f => formSettings[f.formType]);
+    const missing = enabledForms.filter(f => !pokemonData[f.name]);
+    if (missing.length === 0) return;
+
+    async function loadForms() {
+      const details = {};
+      await Promise.all(missing.map(async form => {
+        try {
+          const r = await fetchFormPokemon(form.name);
+          details[form.name] = {
+            id: form.name,         // string key for forms
+            name: form.display,
+            formName: form.name,   // used for sprite lookup
+            types: r.types.map(t => t.type.name),
+            stats: r.stats,
+            height: r.height,
+            weight: r.weight,
+            base_experience: r.base_experience || 0,
+            egg_groups: [],        // forms don't have separate egg group data
+            isForm: true,
+            formType: form.formType,
+            baseSpecies: form.base,
+          };
+        } catch (e) {
+          // Form not found in API — skip silently
+        }
+      }));
+      setPokemonData(prev => ({ ...prev, ...details }));
+    }
+    loadForms();
+  }, [formSettings]);
 
   async function loadGeneration(genIdx) {
     if (loadedGenIdxs.includes(genIdx)) return;
@@ -335,6 +373,26 @@ export default function TierListPage() {
             ))}
           </DropdownButton>
         </div>
+
+        {/* Alternate forms quick-toggles */}
+        <details style={{ marginBottom: 8 }}>
+          <summary style={{
+            cursor: "pointer", fontSize: "0.8rem", fontWeight: 700,
+            color: "#9fa8da", padding: "4px 0", userSelect: "none",
+            listStyle: "none", display: "flex", alignItems: "center", gap: 6,
+          }}>
+            <span>✨ Alternate Forms</span>
+            {Object.values(formSettings || {}).some(Boolean) && (
+              <span style={{
+                background: "rgba(255,214,0,0.2)", border: "1px solid rgba(255,214,0,0.4)",
+                borderRadius: 20, padding: "1px 8px", fontSize: "0.68rem", color: "#fdd835",
+              }}>active</span>
+            )}
+          </summary>
+          <div style={{ paddingTop: 8 }}>
+            <FormSettingsPanel compact />
+          </div>
+        </details>
 
         {/* Tier config toolbar */}
         <div style={{
@@ -463,6 +521,7 @@ export default function TierListPage() {
             return (
               <PokemonCard
                 key={id} id={p.id} name={p.name} types={p.types} size="small"
+                formName={p.formName || null}
                 onDragStart={e =>
                   e.dataTransfer.setData("text/plain", JSON.stringify({ id: p.id, fromTier: "unranked" }))
                 }
