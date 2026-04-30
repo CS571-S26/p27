@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Container, Button, Badge, Dropdown, DropdownButton, Modal } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../hooks/AppContext";
-import { fetchPokemonList, fetchPokemon, GENERATIONS, spriteUrl, TYPE_COLORS } from "../utils/pokeapi";
+import { fetchPokemonList, fetchPokemon, GENERATIONS, TIERS, spriteUrl, TYPE_COLORS } from "../utils/pokeapi";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 // ─── Picker Algorithm ─────────────────────────────────────────────────────────
