@@ -91,6 +91,32 @@ export function AppProvider({ children }) {
     }
   }, [favorites, currentUser]);
 
+  // ── Bracket session persistence ──────────────────────────────────────────
+  // Saves the active bracket picker session so page reloads don't lose progress.
+  // bracketSession is an opaque object managed entirely by BracketPickerPage.
+
+  const [bracketSession, _setBracketSession] = useState(() => {
+    try {
+      const raw = localStorage.getItem(`pokestats_bracket_session`);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+
+  function saveBracketSession(session) {
+    try {
+      if (session === null) {
+        localStorage.removeItem(`pokestats_bracket_session`);
+      } else {
+        localStorage.setItem(`pokestats_bracket_session`, JSON.stringify(session));
+      }
+    } catch {}
+    _setBracketSession(session);
+  }
+
+  function clearBracketSession() {
+    saveBracketSession(null);
+  }
+
   function login(username) {
     setCurrentUser(username);
     localStorage.setItem("pokestats_current_user", username);
@@ -239,6 +265,7 @@ export function AppProvider({ children }) {
       tierState, setTierState, movePokemon, addToUnranked, resetTiers,
       favorites, setFavorites, toggleFavorite,
       totalRanked, totalUnranked,
+      bracketSession, saveBracketSession, clearBracketSession,
     }}>
       {children}
     </AppContext.Provider>
