@@ -159,10 +159,6 @@ export function AppProvider({ children }) {
     setTierState(prev => prev ? { ...prev, [newId]: [] } : prev);
   }
 
-  function addTierWithId(newTier) {
-    setTierConfig(prev => [...prev, newTier]);
-    setTierState(prev => prev ? { ...prev, [newTier.id]: [] } : prev);
-  }
 
   function removeTier(tierId) {
     setTierConfig(prev => {
@@ -180,25 +176,20 @@ export function AppProvider({ children }) {
     });
   }
 
-  function moveTierUp(tierId) {
+  function moveTier(tierId, direction) {
     setTierConfig(prev => {
       const idx = prev.findIndex(t => t.id === tierId);
-      if (idx <= 0) return prev;
+      const delta = direction === "up" ? -1 : 1;
+      const target = idx + delta;
+      if (target < 0 || target >= prev.length) return prev;
       const next = [...prev];
-      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      [next[idx], next[target]] = [next[target], next[idx]];
       return next;
     });
   }
-
-  function moveTierDown(tierId) {
-    setTierConfig(prev => {
-      const idx = prev.findIndex(t => t.id === tierId);
-      if (idx >= prev.length - 1) return prev;
-      const next = [...prev];
-      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
-      return next;
-    });
-  }
+  // Convenience aliases so callers don't need to know the direction string
+  const moveTierUp   = tierId => moveTier(tierId, "up");
+  const moveTierDown = tierId => moveTier(tierId, "down");
 
   function resetTierConfig() {
     const fresh = defaultTierConfig();
@@ -260,7 +251,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       currentUser, login, logout,
       tierConfig, setTierConfig,
-      renameTier, recolorTier, insertTierAfter, addTierWithId, removeTier,
+      renameTier, recolorTier, insertTierAfter, removeTier,
       moveTierUp, moveTierDown, resetTierConfig,
       tierState, setTierState, movePokemon, addToUnranked, resetTiers,
       favorites, setFavorites, toggleFavorite,

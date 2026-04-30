@@ -1,101 +1,112 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Container, Button, Badge, Dropdown, DropdownButton, Modal } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../hooks/AppContext";
-import { fetchPokemonList, fetchPokemon, GENERATIONS, spriteUrl, TYPE_COLORS, TIERS } from "../utils/pokeapi";
+import { fetchPokemonList, fetchPokemon, GENERATIONS, spriteUrl, TYPE_COLORS } from "../utils/pokeapi";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 // ─── Picker Algorithm ─────────────────────────────────────────────────────────
 
-function freshPickerState(ids) {
-  const shuffled = [...ids].sort(() => Math.random() - 0.5);
-  const bs = safeBatch(shuffled.length);
-  return {
-    roundPool:     shuffled.slice(bs),
-    evaluating:    shuffled.slice(0, bs),
-    roundSurvived: [],
-    eliminated:    [],
-    favorites:     [],
-    history:       [],
-    done:          false,
-  };
-}
-
 function safeBatch(n) {
-  // Batch is always < n so roundPool is never depleted before round end.
-  // Exception: n <= 2 means this IS the final comparison.
   if (n <= 2) return n;
   const ideal = Math.ceil(n / 5);
   return Math.max(2, Math.min(10, Math.min(ideal, n - 1)));
 }
 
-function pickerPick(state, pickedIds) {
-  const pickedSet = new Set(pickedIds);
-  const losers = state.evaluating.filter(id => !pickedSet.has(id));
+function freshPickerState(ids) {
+  const pool = [...ids].sort(() => Math.random() - 0.5);
+  const bs = safeBatch(pool.length);
+  return {
+    queue:    pool.slice(bs),   // waiting to be batched this round
+    batch:    pool.slice(0, bs),// current comparison
+    survived: [],               // won their batch, await sub-round
+    losers:   [],               // lost, will compete next round
+    ranked:   [],               // final order, best first
+    done:     false,
+    history:  [],
+  };
+}
 
-  // newEliminated: ordered worst-first (losers appended at end)
-  const newEliminated = [...state.eliminated, ...losers];
-  const newSurvived   = [...state.roundSurvived, ...pickedIds];
-  const newPool       = [...state.roundPool];
-  let newFavorites    = [...state.favorites];
-  let newEvaluating   = [];
-  let nextPool        = [];
-  let nextSurvived    = [];
-  let nextEliminated  = newEliminated;
-  let done            = false;
+function pickerPick(state, chosenIds) {
+  const chosenSet = new Set(chosenIds);
+  let newLosers   = [...state.losers, ...state.batch.filter(id => !chosenSet.has(id))];
+  let newSurvived = [...state.survived, ...chosenIds];
+  let newQueue    = [...state.queue];
+  let newRanked   = [...state.ranked];
+  let done = false;
+  let newBatch = null;
 
-  if (newPool.length === 0) {
-    // ── End of a round ──
-    if (newSurvived.length === 1) {
-      // Clear winner for this place
-      newFavorites = [...newFavorites, newSurvived[0]];
-      const favSet    = new Set(newFavorites);
-      const remaining = newEliminated.filter(e => !favSet.has(e));
-
-      if (remaining.length === 0) {
-        done = true;
-      } else if (remaining.length === 1) {
-        newFavorites = [...newFavorites, remaining[0]];
-        done = true;
-      } else {
-        // New round: all losers get a fresh start (no carry-over eliminated list)
-        const sh = [...remaining].sort(() => Math.random() - 0.5);
-        const bs = safeBatch(sh.length);
-        newEvaluating  = sh.slice(0, bs);
-        nextPool       = sh.slice(bs);
-        nextSurvived   = [];
-        nextEliminated = []; // reset: new round, clean slate
+  // Advance until we have a valid (>=2) batch to present, or we're done.
+  while (true) {
+    if (newQueue.length > 0) {
+      // More items to batch this round
+      const bs   = safeBatch(newQueue.length + newSurvived.length);
+      let take   = Math.min(bs, newQueue.length);
+      if (take === 1 && newQueue.length >= 2) take = 2; // never lone batch from queue
+      newBatch = newQueue.slice(0, take);
+      newQueue = newQueue.slice(take);
+      if (newBatch.length === 1) {
+        // Lone item auto-survives without a comparison
+        newSurvived = [...newSurvived, newBatch[0]];
+        newBatch = null;
+        continue; // loop — queue may have more, or we'll hit end-of-round
       }
+      break;
+
     } else {
-      // Multiple survivors — run a survivor-only sub-round
-      const sh = [...newSurvived].sort(() => Math.random() - 0.5);
-      const bs = safeBatch(sh.length);
-      newEvaluating = sh.slice(0, bs);
-      nextPool      = sh.slice(bs);
-      nextSurvived  = [];
-      // Keep nextEliminated (losers from this round still need to compete later)
+      // Queue empty — end of round
+      if (newSurvived.length === 1) {
+        // Found the winner of this round
+        newRanked = [...newRanked, newSurvived[0]];
+        const rankedSet = new Set(newRanked);
+        const remaining = newLosers.filter(id => !rankedSet.has(id));
+
+        if (remaining.length === 0) {
+          done = true; newBatch = []; break;
+        } else if (remaining.length === 1) {
+          newRanked = [...newRanked, remaining[0]];
+          done = true; newBatch = []; break;
+        } else {
+          // New round: all losers get fresh start
+          const sh = [...remaining].sort(() => Math.random() - 0.5);
+          const bs = safeBatch(sh.length);
+          newBatch    = sh.slice(0, bs);
+          newQueue    = sh.slice(bs);
+          newSurvived = [];
+          newLosers   = []; // fresh slate
+          break;
+        }
+
+      } else if (newSurvived.length > 1) {
+        // Sub-round: survivors compete among themselves
+        const sh = [...newSurvived].sort(() => Math.random() - 0.5);
+        const bs = safeBatch(sh.length);
+        newBatch    = sh.slice(0, bs);
+        newQueue    = sh.slice(bs);
+        newSurvived = [];
+        // newLosers stays — they'll rejoin after sub-round produces a winner
+        break;
+
+      } else {
+        // 0 survived — shouldn't happen with valid input
+        done = true; newBatch = []; break;
+      }
     }
-  } else {
-    // ── More batches in this round ──
-    const bs = safeBatch(newPool.length + newSurvived.length);
-    newEvaluating = newPool.slice(0, bs);
-    nextPool      = newPool.slice(bs);
-    nextSurvived  = newSurvived; // accumulate survivors
   }
 
   return {
-    roundPool:      nextPool,
-    evaluating:     newEvaluating,
-    roundSurvived:  nextSurvived,
-    eliminated:     nextEliminated,
-    favorites:      newFavorites,
+    queue:    newQueue,
+    batch:    newBatch || [],
+    survived: newSurvived,
+    losers:   newLosers,
+    ranked:   newRanked,
     done,
-    history: [...state.history.slice(-9), snapshotState(state)],
+    history:  [...state.history.slice(-9), snapshotState(state)],
   };
 }
 
 function pickerPass(state) {
-  return pickerPick(state, state.evaluating);
+  return pickerPick(state, state.batch);
 }
 
 function pickerUndo(state) {
@@ -106,13 +117,13 @@ function pickerUndo(state) {
 
 function snapshotState(s) {
   return {
-    roundPool:     [...s.roundPool],
-    evaluating:    [...s.evaluating],
-    roundSurvived: [...s.roundSurvived],
-    eliminated:    [...s.eliminated],
-    favorites:     [...s.favorites],
-    done:          s.done,
-    history:       [],
+    queue:    [...s.queue],
+    batch:    [...s.batch],
+    survived: [...s.survived],
+    losers:   [...s.losers],
+    ranked:   [...s.ranked],
+    done:    s.done,
+    history: [],
   };
 }
 
@@ -257,7 +268,7 @@ export default function BracketPickerPage() {
   // ─── Session persistence: restore on mount, save on change ────────────────
 
   // Restore bracket session from context on first mount
-  React.useEffect(() => {
+  useEffect(() => {
     if (!bracketSession) return;
     try {
       const s = bracketSession;
@@ -282,7 +293,7 @@ export default function BracketPickerPage() {
   }, []); // intentionally only on mount
 
   // Save session whenever key state changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (mode === MODE_SELECT && !pickerState && poolIds.length === 0 && fullRanking.length === 0) {
       // Nothing active — clear saved session
       clearBracketSession();
@@ -404,7 +415,7 @@ export default function BracketPickerPage() {
     const next = pickerPick(pickerState, Array.from(selected));
     setSelected(new Set());
     if (next.done && mode === MODE_TIER_SORT) {
-      advanceTierSort(tierQueue, currentTierQueueIdx, tierRankedResults, next.favorites, completedTiers);
+      advanceTierSort(tierQueue, currentTierQueueIdx, tierRankedResults, next.ranked, completedTiers);
     } else {
       setPickerState(next);
     }
@@ -414,7 +425,7 @@ export default function BracketPickerPage() {
     const next = pickerPass(pickerState);
     setSelected(new Set());
     if (next.done && mode === MODE_TIER_SORT) {
-      advanceTierSort(tierQueue, currentTierQueueIdx, tierRankedResults, next.favorites, completedTiers);
+      advanceTierSort(tierQueue, currentTierQueueIdx, tierRankedResults, next.ranked, completedTiers);
     } else {
       setPickerState(next);
     }
@@ -443,8 +454,8 @@ export default function BracketPickerPage() {
   // ─── Conversions ─────────────────────────────────────────────────────────
 
   function handleConvertBracketToTiers() {
-    const tiers = favoritesToTiers(pickerState.favorites);
-    const favSet = new Set(pickerState.favorites);
+    const tiers = favoritesToTiers(pickerState.ranked);
+    const favSet = new Set(pickerState.ranked);
     tiers.unranked = poolIds.filter(id => !favSet.has(id));
     setTierState(tiers);
     setConverted(true);
@@ -470,12 +481,12 @@ export default function BracketPickerPage() {
   const currentTierDef = TIERS.find(t => t.id === currentTierId);
   const currentTierTotal = currentTierId ? (tierState?.[currentTierId] || []).length : 0;
 
-  const totalInRound = ps ? ps.roundPool.length + ps.evaluating.length + ps.roundSurvived.length : 0;
+  const totalInRound = ps ? ps.queue.length + ps.batch.length + ps.survived.length : 0;
   // Progress: count pokemon whose final position is known (in favorites)
   // shown as X of N, not %, since % of comparisons done ≠ % of pokemon placed
   const standaloneProgress = ps && poolIds.length > 0
-    ? Math.round((ps.favorites.length / poolIds.length) * 100) : 0;
-  const standaloneRankedCount = ps ? ps.favorites.length : 0;
+    ? Math.round((ps.ranked.length / poolIds.length) * 100) : 0;
+  const standaloneRankedCount = ps ? ps.ranked.length : 0;
   const standaloneTotalCount = poolIds.length;
   const tierSortProgress = tierQueue.length > 0
     ? Math.round((completedTiers.length / tierQueue.length) * 100) : 0;
@@ -642,7 +653,7 @@ export default function BracketPickerPage() {
         <div style={{ textAlign: "center", padding: "20px 0 30px" }}>
           <div style={{ fontSize: "3rem", marginBottom: 8 }}>🎉</div>
           <h1 style={{ fontFamily: "Bangers, cursive", fontSize: "3rem", color: "#fdd835" }}>Complete!</h1>
-          <p style={{ color: "#9fa8da", marginBottom: 20 }}>You've ranked all {ps.favorites.length} Pokémon!</p>
+          <p style={{ color: "#9fa8da", marginBottom: 20 }}>You've ranked all {ps.ranked.length} Pokémon!</p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Button className="btn-poke-primary" onClick={() => setShowConvertModal(true)} style={{ fontSize: "1rem" }}>
               📊 Convert to Tier List
@@ -657,7 +668,7 @@ export default function BracketPickerPage() {
             }}>✓ Tier List updated!</div>
           )}
         </div>
-        <RankedList favorites={ps.favorites} pokemonData={pokemonData} />
+        <RankedList favorites={ps.ranked} pokemonData={pokemonData} />
 
         <Modal show={showConvertModal} onHide={() => setShowConvertModal(false)} centered className="poke-modal">
           <Modal.Header closeButton closeVariant="white">
@@ -751,12 +762,12 @@ export default function BracketPickerPage() {
       )}
 
       {/* Favorites so far (standalone) */}
-      {!isTierSort && ps.favorites.length > 0 && (
+      {!isTierSort && ps.ranked.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontFamily: "Bangers, cursive", fontSize: "1.2rem", color: "#9fa8da", marginBottom: 8 }}>
-            Ranked so far ({ps.favorites.length})
+            Ranked so far ({ps.ranked.length})
           </div>
-          <RankedList favorites={ps.favorites} pokemonData={pokemonData} />
+          <RankedList favorites={ps.ranked} pokemonData={pokemonData} />
         </div>
       )}
 
@@ -777,13 +788,13 @@ export default function BracketPickerPage() {
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", marginBottom: 20 }}>
-          {ps.evaluating.map(id => {
+          {ps.batch.map(id => {
             const p = pokemonData[id];
             return (
               <BracketCard
                 key={id} id={id} name={p?.name} types={p?.types}
                 selected={selected.has(id)} onClick={toggleSelect}
-                size={ps.evaluating.length <= 4 ? 120 : ps.evaluating.length <= 8 ? 88 : 72}
+                size={ps.batch.length <= 4 ? 120 : ps.batch.length <= 8 ? 88 : 72}
               />
             );
           })}
@@ -809,8 +820,8 @@ export default function BracketPickerPage() {
 
       <div style={{ textAlign: "center", color: "#9fa8da", fontSize: "0.78rem" }}>
         {isTierSort
-          ? `${ps.favorites.length} of ${currentTierTotal} sorted in ${currentTierId} tier · ${totalInRound} remaining in round`
-          : `${totalInRound} remaining in round · ${ps.roundSurvived.length} survived so far`}
+          ? `${ps.ranked.length} of ${currentTierTotal} sorted in ${currentTierId} tier · ${totalInRound} remaining in round`
+          : `${totalInRound} remaining in round · ${ps.survived.length} survived so far`}
       </div>
     </Container>
   );

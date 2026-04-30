@@ -247,10 +247,15 @@ export default function StatsPage() {
     }
 
     // Favorite type
-    const favType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
-    const favGen = Object.entries(genCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+    const favType   = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+    const favGen    = Object.entries(genCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
     const favWeight = Object.entries(weightBrackets).sort((a, b) => b[1] - a[1])[0]?.[0];
-    const avgBST = Math.round(known.reduce((s, p) => s + Object.values(p.stats).reduce((a, b) => a + b, 0), 0) / known.length);
+
+    const totalBST = known.reduce((sum, p) => {
+      const bst = Object.values(p.stats).reduce((a, b) => a + b, 0);
+      return sum + bst;
+    }, 0);
+    const avgBST = Math.round(totalBST / known.length);
 
     return {
       count: known.length,

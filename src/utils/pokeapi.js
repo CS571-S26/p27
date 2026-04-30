@@ -81,7 +81,8 @@ export const GAME_VERSION_COLORS = {
 // Maps dex number ranges to the games that pokemon appeared in first.
 // Used to color the name label on PokemonCard with a gradient of those game colors.
 
-export function getPokemonVersionColors(id) {
+// Superseded by getAccessibleVersionColors — kept for reference only
+function getPokemonVersionColors(id) {
   // Gen I — Red & Blue (and Yellow)
   if (id >= 1 && id <= 151)
     return [GAME_VERSION_COLORS.red, GAME_VERSION_COLORS.blue];

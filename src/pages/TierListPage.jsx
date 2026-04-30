@@ -1,35 +1,13 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef } from "react";
 import { Button, Dropdown, DropdownButton, Modal, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { useApp } from "../hooks/AppContext";
 import { fetchPokemonList, fetchPokemon, GENERATIONS } from "../utils/pokeapi";
 import PokemonCard from "../components/PokemonCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 
-// ─── Color palette for new tiers ─────────────────────────────────────────────
-
-const PALETTE = [
-  "#FF7F7F","#FFBF7F","#FFFF7F","#BFFF7F","#7FFF7F",
-  "#7FFFBF","#7FFFFF","#7FBFFF","#7F7FFF","#BF7FFF",
-  "#FF7FFF","#FF7FBF","#FFB347","#87CEEB","#98FB98",
-  "#DDA0DD","#F0E68C","#E0FFFF","#FFDAB9","#C0C0C0",
-];
-
-function hexToBg(hex) {
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
-  return `rgba(${r},${g},${b},0.12)`;
-}
-
-function makeTier(idx) {
-  const color = PALETTE[idx % PALETTE.length];
-  return {
-    id: "tier_" + Math.random().toString(36).slice(2, 8),
-    label: `Tier ${idx + 1}`,
-    color,
-    bg: hexToBg(color),
-  };
-}
+// Tier color utilities live in AppContext to avoid duplication.
+// makeTier() is a local convenience that mirrors AppContext's insertTierAfter logic.
+function makeTierLabel(count) { return `Tier ${count + 1}`; }
 
 // ─── Inline-editable tier label ───────────────────────────────────────────────
 
@@ -172,7 +150,7 @@ function TierRow({ tier, pokemon, onDrop, onRemove, onRename, onRecolor, onMoveU
 
       <div
         className={`tier-drop-zone ${dragOver ? "drag-over" : ""}`}
-        style={{ background: dragOver ? hexToBg(tier.color).replace("0.12", "0.2") : tier.bg }}
+        style={{ background: dragOver ? tier.bg.replace("0.12", "0.2") : tier.bg }}
       >
         {pokemon.map(p => (
           <div key={p.id} style={{ position: "relative" }}>
