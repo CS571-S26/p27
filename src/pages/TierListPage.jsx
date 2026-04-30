@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button, Dropdown, DropdownButton, Modal, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { useApp } from "../hooks/AppContext";
-import { fetchPokemonList, fetchPokemon, GENERATIONS, ALTERNATE_FORMS, fetchFormPokemon } from "../utils/pokeapi";
+import { fetchPokemonList, fetchPokemon, GENERATIONS, ALTERNATE_FORMS, fetchFormPokemon, extractSprite } from "../utils/pokeapi";
 import FormSettingsPanel from "../components/FormSettingsPanel";
 import PokemonCard from "../components/PokemonCard";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -158,6 +158,7 @@ function TierRow({ tier, pokemon, onDrop, onRemove, onRename, onRecolor, onMoveU
             <PokemonCard
               id={p.id} name={p.name} types={p.types} size="small"
               formName={p.formName || null}
+              spriteOverride={p.sprite || null}
               onDragStart={e =>
                 e.dataTransfer.setData("text/plain", JSON.stringify({ id: p.id, fromTier: tier.id }))
               }
@@ -282,27 +283,35 @@ export default function TierListPage() {
 
     async function loadForms() {
       const details = {};
-      await Promise.all(missing.map(async form => {
-        try {
+      // Load in small batches to avoid overwhelming the API
+      const batchSize = 10;
+      for (let i = 0; i < missing.length; i += batchSize) {
+        const batch = missing.slice(i, i + batchSize);
+        await Promise.all(batch.map(async form => {
           const r = await fetchFormPokemon(form.name);
+          if (!r) return; // form not found in API, skip
+          const sprite = extractSprite(r);
           details[form.name] = {
-            id: form.name,         // string key for forms
+            id: form.name,
             name: form.display,
-            formName: form.name,   // used for sprite lookup
+            formName: form.name,
+            sprite,                // canonical URL from API
             types: r.types.map(t => t.type.name),
             stats: r.stats,
             height: r.height,
             weight: r.weight,
             base_experience: r.base_experience || 0,
-            egg_groups: [],        // forms don't have separate egg group data
+            egg_groups: [],
             isForm: true,
             formType: form.formType,
             baseSpecies: form.base,
           };
-        } catch (e) {
-          // Form not found in API — skip silently
+        }));
+        // Small delay between batches to be polite to the API
+        if (i + batchSize < missing.length) {
+          await new Promise(res => setTimeout(res, 200));
         }
-      }));
+      }
       setPokemonData(prev => ({ ...prev, ...details }));
     }
     loadForms();
@@ -522,6 +531,7 @@ export default function TierListPage() {
               <PokemonCard
                 key={id} id={p.id} name={p.name} types={p.types} size="small"
                 formName={p.formName || null}
+                spriteOverride={p.sprite || null}
                 onDragStart={e =>
                   e.dataTransfer.setData("text/plain", JSON.stringify({ id: p.id, fromTier: "unranked" }))
                 }

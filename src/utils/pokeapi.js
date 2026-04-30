@@ -501,18 +501,33 @@ export const ALTERNATE_FORMS = [
   { name: "ogerpon-cornerstone", display: "Cornerstone Ogerpon",base: "ogerpon",      formType: "other" },
 ];
 
-// Sprite URL for a named form (uses the name-based path, not numeric ID)
-export function formSpriteUrl(formName) {
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${formName}.png`;
+// Fetch full details for an alternate form by name.
+// Returns null if the form doesn't exist in the API.
+// The API response includes sprites.front_default — the canonical sprite URL.
+const FORM_CACHE = {};
+export async function fetchFormPokemon(formName) {
+  if (FORM_CACHE[formName]) return FORM_CACHE[formName];
+  try {
+    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${formName}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    FORM_CACHE[formName] = data;
+    return data;
+  } catch {
+    return null;
+  }
 }
 
-// Fetch full details for an alternate form by name
-export async function fetchFormPokemon(formName) {
-  const BASE = "https://pokeapi.co/api/v2";
-  const CACHE = window._pokeFormCache || (window._pokeFormCache = {});
-  if (CACHE[formName]) return CACHE[formName];
-  const res = await fetch(`${BASE}/pokemon/${formName}`);
-  const data = await res.json();
-  CACHE[formName] = data;
-  return data;
+// Extract the best available sprite URL from a raw PokeAPI pokemon response.
+// Falls back through official-artwork → front_default → null.
+export function extractSprite(apiResponse) {
+  if (!apiResponse) return null;
+  return (
+    apiResponse.sprites?.other?.["official-artwork"]?.front_default ||
+    apiResponse.sprites?.front_default ||
+    null
+  );
 }
+
+// Placeholder for forms that failed to load
+export const FORM_FALLBACK_SPRITE = null; // components handle null gracefully

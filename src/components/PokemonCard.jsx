@@ -1,5 +1,5 @@
 import React from "react";
-import { spriteUrl, formSpriteUrl, TYPE_COLORS, getAccessibleVersionColors, versionGradient } from "../utils/pokeapi";
+import { spriteUrl, TYPE_COLORS, getAccessibleVersionColors, versionGradient } from "../utils/pokeapi";
 
 // Types whose background is light enough to need dark text for WCAG AA contrast
 const LIGHT_TYPES = new Set([
@@ -9,20 +9,21 @@ const LIGHT_TYPES = new Set([
 
 export default function PokemonCard({
   id, name, types = [],
-  formName = null,  // if set, this is an alternate form — use name-based sprite
+  formName = null,   // if set, this is an alternate form
+  spriteOverride = null, // explicit sprite URL from API (used for forms)
   dragging = false, onClick, selected = false,
-  size = "normal", // "normal" | "small" | "large"
+  size = "normal",   // "normal" | "small" | "large"
   draggable = true, onDragStart, onDragEnd,
 }) {
   const imgSize = size === "small" ? 48 : size === "large" ? 96 : 64;
   const isForm = !!formName;
 
-  // Version gradient: forms use a neutral gradient since they span multiple games
+  // Version gradient: forms use neutral gradient since they span multiple games
   const versionColors = isForm ? ["#AAAACC", "#8888BB"] : getAccessibleVersionColors(id);
   const gradient = versionGradient(versionColors);
 
-  // Sprite: forms use name-based URL, regular pokemon use numeric ID
-  const sprite = isForm ? formSpriteUrl(formName) : spriteUrl(id);
+  // Sprite: prefer API-provided URL, fall back to numeric ID sprite
+  const sprite = spriteOverride || spriteUrl(id);
 
   return (
     <div

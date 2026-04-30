@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Container, Badge } from "react-bootstrap";
 import { useApp } from "../hooks/AppContext";
-import { fetchPokemonList, fetchPokemon, GENERATIONS, spriteUrl, formSpriteUrl, TYPE_COLORS, getGenGradient, ALTERNATE_FORMS, fetchFormPokemon } from "../utils/pokeapi";
+import { fetchPokemonList, fetchPokemon, GENERATIONS, spriteUrl, TYPE_COLORS, getGenGradient, ALTERNATE_FORMS, fetchFormPokemon, extractSprite } from "../utils/pokeapi";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useNavigate } from "react-router-dom";
 
@@ -174,19 +174,33 @@ export default function FavoritesPage() {
     const enabled = ALTERNATE_FORMS.filter(f => formSettings[f.formType]);
     const missing = enabled.filter(f => !formPokemonData[f.name]);
     if (!missing.length) return;
-    Promise.all(missing.map(async form => {
-      try {
-        const r = await fetchFormPokemon(form.name);
-        return [form.name, {
-          id: form.name, name: form.display, formName: form.name,
-          types: r.types.map(t => t.type.name),
-          isForm: true, formType: form.formType, baseSpecies: form.base,
-        }];
-      } catch { return null; }
-    })).then(results => {
-      const details = Object.fromEntries(results.filter(Boolean));
-      setFormPokemonData(prev => ({ ...prev, ...details }));
-    });
+
+    async function loadAll() {
+      const batchSize = 10;
+      for (let i = 0; i < missing.length; i += batchSize) {
+        const batch = missing.slice(i, i + batchSize);
+        const results = await Promise.all(batch.map(async form => {
+          const r = await fetchFormPokemon(form.name);
+          if (!r) return null;
+          return [form.name, {
+            id: form.name,
+            name: form.display,
+            formName: form.name,
+            sprite: extractSprite(r),  // canonical URL from API
+            types: r.types.map(t => t.type.name),
+            isForm: true,
+            formType: form.formType,
+            baseSpecies: form.base,
+          }];
+        }));
+        const details = Object.fromEntries(results.filter(Boolean));
+        setFormPokemonData(prev => ({ ...prev, ...details }));
+        if (i + batchSize < missing.length) {
+          await new Promise(res => setTimeout(res, 200));
+        }
+      }
+    }
+    loadAll();
   }, [formSettings]);
 
   async function loadGen(idx) {
@@ -322,6 +336,11 @@ export default function FavoritesPage() {
                   </span>
                   <span style={{ fontSize: "0.75rem", fontWeight: 400 }}>({forms.length})</span>
                 </div>
+                {forms.some(f => formPokemonData[f.name]) ? null : (
+                  <div style={{ color: "#9fa8da", fontSize: "0.8rem", padding: "8px 0" }}>
+                    Loading forms...
+                  </div>
+                )}
                 <div className="favorites-grid">
                   {forms.map(form => {
                     const p = formPokemonData[form.name];
@@ -335,13 +354,21 @@ export default function FavoritesPage() {
                         aria-label={`${sel ? "Remove" : "Add"} ${form.display} ${sel ? "from" : "to"} favorites`}
                         style={{ textAlign: "center" }}
                       >
-                        <img
-                          src={formSpriteUrl(form.name)}
-                          alt={form.display}
-                          width={72} height={72}
-                          loading="lazy"
-                          style={{ imageRendering: "pixelated" }}
-                        />
+                        {p?.sprite ? (
+                          <img
+                            src={p.sprite}
+                            alt={form.display}
+                            width={72} height={72}
+                            loading="lazy"
+                            style={{ imageRendering: "pixelated" }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: 72, height: 72, display: "flex",
+                            alignItems: "center", justifyContent: "center",
+                            fontSize: "1.5rem", opacity: 0.4,
+                          }}>⏳</div>
+                        )}
                         <div style={{
                           fontSize: "0.62rem", fontWeight: 700,
                           color: sel ? "#e040fb" : "#9fa8da", marginTop: 4,
